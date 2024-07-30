@@ -8,10 +8,18 @@ const port = process.env.PORT || 3000;
 // MongoDB connection URI from environment variable
 const mongoURI = process.env.DATABASE_URI;
 
+let dbConnectionSuccessful = false;
+
 // Connect to MongoDB
 mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then(() => console.log('MongoDB connected'))
-    .catch(err => console.log('Error connecting to MongoDB:', err));
+    .then(() => {
+        console.log('MongoDB connected');
+        dbConnectionSuccessful = true;
+    })
+    .catch(err => {
+        console.log('Error connecting to MongoDB:', err);
+        dbConnectionSuccessful = false;
+    });
 
 // Define a schema for the health-test collection
 const healthSchema = new mongoose.Schema({
@@ -24,6 +32,11 @@ const HealthTest = mongoose.model('health-test', healthSchema);
 
 // Define the /check endpoint
 app.get('/health', async (req, res) => {
+    if (!dbConnectionSuccessful) {
+        res.status(200).send('Service is up (no database connection)');
+        return;
+    }
+
     try {
         let healthCheck = await HealthTest.findOne({ name: 'health-check' });
         if (!healthCheck) {
